@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Small Hydro Calculator</title>
+    <!-- TailwindCSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 p-6">
+<main class="max-w-xl mx-auto bg-white shadow-xl rounded-2xl p-8">
+    <h1 class="text-3xl font-bold mb-6 text-center">Small Hydro Calculator</h1>
+
+    <!-- Inputs -->
+    <div class="grid gap-4">
+        <label class="block">
+            <span class="font-medium">Pressure (PSI)</span>
+            <input id="pressure" type="number" step="0.1" value="65" class="mt-1 w-full border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 p-2" />
+        </label>
+
+        <label class="block">
+            <span class="font-medium">Nozzle Size</span>
+            <select id="orifice" class="mt-1 w-full border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 p-2">
+                <option value="0.125">1/8 in</option>
+                <option value="0.1875">3/16 in</option>
+                <option value="0.25">1/4 in</option>
+                <option value="0.3125" selected>5/16 in</option>
+                <option value="0.375">3/8 in</option>
+                <option value="0.4375">7/16 in</option>
+            </select>
+        </label>
+
+        <label class="block">
+            <span class="font-medium">Voltage (V)</span>
+            <input id="voltage" type="number" step="0.1" value="27" class="mt-1 w-full border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 p-2" />
+        </label>
+
+        <label class="block">
+            <span class="font-medium">Efficiency (%)</span>
+            <input id="eff" type="number" step="0.1" value="70" class="mt-1 w-full border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 p-2" />
+        </label>
+
+        <label class="block">
+            <span class="font-medium">Coefficient of Discharge (%)</span>
+            <input id="cd" type="number" step="0.1" value="65" class="mt-1 w-full border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 p-2" />
+        </label>
+    </div>
+
+    <!-- Outputs -->
+    <div class="mt-6 border-t pt-4">
+        <p class="text-lg">Power: <span id="power" class="font-semibold">–</span> W</p>
+        <p class="text-lg">Current: <span id="current" class="font-semibold">–</span> A</p>
+    </div>
+</main>
+
+<script>
+    const PSI_TO_PASCAL = 6894.757;    // 1 psi → Pa
+    const INCH_TO_METER = 0.0254;      // 1 in → m
+    const RHO = 1000;                  // water density kg·m⁻³
+
+    function flowRate(pressurePa, Cd, diameterM) {
+        const area = Math.PI * (diameterM / 2) ** 2;          // m²
+        return Cd * area * Math.sqrt((2 * pressurePa) / RHO); // m³/s
+    }
+
+    function calculate() {
+        const pressurePsi = parseFloat(document.getElementById('pressure').value);
+        const orificeIn   = parseFloat(document.getElementById('orifice').value);
+        const voltage     = parseFloat(document.getElementById('voltage').value);
+        const CdPercent   = parseFloat(document.getElementById('cd').value);
+        const effPercent  = parseFloat(document.getElementById('eff').value);
+
+        if ([pressurePsi, orificeIn, voltage, CdPercent, effPercent].some(Number.isNaN)) {
+            return;
+        }
+
+        const pressurePa = pressurePsi * PSI_TO_PASCAL;
+        const diameterM  = orificeIn * INCH_TO_METER;
+        const Cd         = CdPercent / 100;
+        const efficiency = effPercent / 100;
+
+        const Q = flowRate(pressurePa, Cd, diameterM);          // m³/s
+        const hydraulicP = Q * pressurePa;                      // W
+        const outputP    = hydraulicP * efficiency;             // W
+        const currentA   = voltage > 0 ? outputP / voltage : 0; // A
+
+        document.getElementById('power').textContent   = outputP.toFixed(2);
+        document.getElementById('current').textContent = currentA.toFixed(2);
+    }
+
+    // Add event listeners for live calculation
+    ['pressure','orifice','voltage','cd','eff'].forEach(id => {
+        const el = document.getElementById(id);
+        const eventType = el.tagName.toLowerCase() === 'select' ? 'change' : 'input';
+        el.addEventListener(eventType, calculate);
+    });
+
+    calculate(); // initial display with defaults
+</script>
+</body>
+</html>
