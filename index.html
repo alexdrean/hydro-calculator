@@ -9,54 +9,62 @@
 </head>
 <body class="bg-gray-100 text-gray-900 p-6">
 <main class="max-w-xl mx-auto bg-white shadow-xl rounded-2xl p-8">
-    <h1 class="text-3xl font-bold mb-6 text-center">Small Hydro Calculator</h1>
+    <h1 class="text-3xl font-bold mb-6 text-center">Small Hydro Calculator</h1>
 
     <!-- Inputs -->
     <div class="grid gap-4">
-        <label class="block">
-            <span class="font-medium">Pressure (PSI)</span>
-            <input id="pressure" type="number" step="0.1" value="65" class="mt-1 w-full border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 p-2" />
-        </label>
+        <!-- Two-column row: PSI and ft head -->
+        <div class="grid grid-cols-2 gap-4">
+            <label class="block">
+                <span class="font-medium">Pressure (PSI)</span>
+                <input id="pressure" type="number" step="0.1" value="65" class="mt-1 w-full border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 p-2" />
+            </label>
+            <label class="block">
+                <span class="font-medium">Head (ft)</span>
+                <input id="head" type="number" step="0.1" value="150.15" class="mt-1 w-full border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 p-2" />
+            </label>
+        </div>
 
         <label class="block">
-            <span class="font-medium">Nozzle Size</span>
+            <span class="font-medium">Nozzle Size</span>
             <select id="orifice" class="mt-1 w-full border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 p-2">
-                <option value="0.125">1/8 in</option>
-                <option value="0.1875">3/16 in</option>
-                <option value="0.25">1/4 in</option>
-                <option value="0.3125" selected>5/16 in</option>
-                <option value="0.375">3/8 in</option>
-                <option value="0.4375">7/16 in</option>
+                <option value="0.125">1/8 in</option>
+                <option value="0.1875">3/16 in</option>
+                <option value="0.25">1/4 in</option>
+                <option value="0.3125" selected>5/16 in</option>
+                <option value="0.375">3/8 in</option>
+                <option value="0.4375">7/16 in</option>
             </select>
         </label>
 
         <label class="block">
-            <span class="font-medium">Voltage (V)</span>
+            <span class="font-medium">Voltage (V)</span>
             <input id="voltage" type="number" step="0.1" value="27" class="mt-1 w-full border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 p-2" />
         </label>
 
         <label class="block">
-            <span class="font-medium">Efficiency (%)</span>
+            <span class="font-medium">Efficiency (%)</span>
             <input id="eff" type="number" step="0.1" value="70" class="mt-1 w-full border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 p-2" />
         </label>
 
         <label class="block">
-            <span class="font-medium">Coefficient of Discharge (%)</span>
+            <span class="font-medium">Coefficient of Discharge (%)</span>
             <input id="cd" type="number" step="0.1" value="65" class="mt-1 w-full border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 p-2" />
         </label>
     </div>
 
     <!-- Outputs -->
     <div class="mt-6 border-t pt-4">
-        <p class="text-lg">Power: <span id="power" class="font-semibold">–</span> W</p>
-        <p class="text-lg">Current: <span id="current" class="font-semibold">–</span> A</p>
+        <p class="text-lg">Power: <span id="power" class="font-semibold">–</span> W</p>
+        <p class="text-lg">Current: <span id="current" class="font-semibold">–</span> A</p>
     </div>
 </main>
 
 <script>
-    const PSI_TO_PASCAL = 6894.757;    // 1 psi → Pa
-    const INCH_TO_METER = 0.0254;      // 1 in → m
-    const RHO = 1000;                  // water density kg·m⁻³
+    const PSI_TO_PASCAL = 6894.757;    // 1 psi → Pa
+    const INCH_TO_METER = 0.0254;      // 1 in → m
+    const RHO = 1000;                  // water density kg/m³
+    const PSI_TO_HEAD = 2.30725;          // 1 psi → 2.31 ft head
 
     function flowRate(pressurePa, Cd, diameterM) {
         const area = Math.PI * (diameterM / 2) ** 2;          // m²
@@ -88,14 +96,42 @@
         document.getElementById('current').textContent = currentA.toFixed(2);
     }
 
-    // Add event listeners for live calculation
-    ['pressure','orifice','voltage','cd','eff'].forEach(id => {
+    // Grab references to both pressure fields
+    const pressureInput = document.getElementById('pressure');
+    const headInput     = document.getElementById('head');
+
+    // When PSI changes, update the head field and recalc
+    pressureInput.addEventListener('input', () => {
+        const psiValue = parseFloat(pressureInput.value);
+        if (!Number.isNaN(psiValue)) {
+            headInput.value = (psiValue * PSI_TO_HEAD).toFixed(2);
+        } else {
+            headInput.value = '';
+        }
+        calculate();
+    });
+
+    // When head changes, update the PSI field and recalc
+    headInput.addEventListener('input', () => {
+        const headValue = parseFloat(headInput.value);
+        if (!Number.isNaN(headValue)) {
+            pressureInput.value = (headValue / PSI_TO_HEAD).toFixed(2);
+        } else {
+            pressureInput.value = '';
+        }
+        calculate();
+    });
+
+    // Other inputs just trigger calculate()
+    ['orifice','voltage','cd','eff'].forEach(id => {
         const el = document.getElementById(id);
         const eventType = el.tagName.toLowerCase() === 'select' ? 'change' : 'input';
         el.addEventListener(eventType, calculate);
     });
 
-    calculate(); // initial display with defaults
+    // Initialize head based on default PSI, then run first calculation
+    headInput.value = (parseFloat(pressureInput.value) * PSI_TO_HEAD).toFixed(2);
+    calculate();
 </script>
 </body>
 </html>
