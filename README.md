@@ -1,5 +1,7 @@
 # Small Hydro Calculator
 
+[Use live](//alexdrean.github.io/hydro-calculator)
+
 This **Small Hydro Calculator** is a simple, client-side HTML/JavaScript tool designed to help you estimate the electrical power and current output from a small hydro power setup. By entering the following parameters, the calculator dynamically computes:
 
 * **Pressure (PSI)**: The static pressure driving the flow through an orifice.
